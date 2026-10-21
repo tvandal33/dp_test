@@ -34,13 +34,13 @@ connection = None
 notconnect_interfaces = []
 excluded_interfaces = []
 ports_to_disable = []
-IGNORE_PREFIXES = ("OR-", "NS-", "PX-", "SL-", "PVM-", "LENEL")
+ignore_prefixes = ("OR-", "NS-", "PX-", "SL-", "PVM-", "LENEL")
 Week_Threshold = 26
 
 print("Connecting to Switch...")
 connection = ConnectHandler(**SWITCH)
 
-show_interfaces = connection.send_command("show interface g1/0/2", use_textfsm=True)
+show_interfaces = connection.send_command("show interface", use_textfsm=True)
 
 #print(show_interfaces)
 
@@ -50,13 +50,13 @@ show_interfaces = connection.send_command("show interface g1/0/2", use_textfsm=T
 
 print("\nFinding Excluded Interfaces Based on Description")
 for interface in show_interfaces:
-    if interface['description'].startswith(IGNORE_PREFIXES):
+    if interface['description'].startswith(ignore_prefixes):
         excluded_interfaces.append(interface['interface'])
 
 if excluded_interfaces == []:
     print("\nNo Interfaces Being Excluded Based on Description")
 else:
-    print(excluded_interfaces)
+    print(f"\nList of Excluded Interfaces: {excluded_interfaces}")
 
 #==========================
 # Finding notconnect ports
@@ -84,39 +84,28 @@ for interface in show_interfaces:
     if interface['interface'] not in notconnect_interfaces:
         continue
     else:
-        if "w" in 'last_input':
-            text = 'last_input'
-            
-            spaced_text = text.replace("w", " w ").replace("d", " d ")
-            
-            result_last_input = spaced_text.split()
-            
-            print(result_last_input)
-        else:
-            continue
+        input_weeks = 0
+        output_weeks = 0
 
-        if "w" in 'last_output':
-            text = 'last_output'
-            
-            spaced_text = text.replace("w", " w ").replace("d", " d ")
-            
-            result_last_output = spaced_text.split()
-            
-            print(result_last_output)
-        else:
-            continue
+        if "w" in interface['last_input']:
+            input_weeks = int(interface['last_input'].split('w')[0])
 
-        if (interface['last_input'] == 'never' or interface[result_last_input[0]] >= Week_Threshold) and (interface['last_output'] == 'never' or interface[result_last_output[0]] >= Week_Threshold):
+        if "w" in interface['last_output']:
+            output_weeks = int(interface['last_output'].split('w')[0])
+
+        if (
+            (interface['last_input'] == "never" or input_weeks >= Week_Threshold)
+            and
+            (interface['last_output'] == "never" or output_weeks >= Week_Threshold)
+        ):
             ports_to_disable.append(interface['interface'])
         else:
             continue
+
 if ports_to_disable == []:
     print("\nNo Interfaces to Disable")
 else:
     print(f"\nList of Ports To Disable: {ports_to_disable}")
-
-
-
 
 
 
