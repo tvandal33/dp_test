@@ -5,8 +5,8 @@ from netmiko import ConnectHandler
 # KEYRING SETTINGS
 #=========================
 
-service_name = ""
-username = ""
+service_name = "cisco_devices1"
+username = "Test"
 password = keyring.get_password(service_name, username)
 
 if not password:
@@ -21,7 +21,7 @@ if not password:
 
 SWITCH = {
     "device_type": "cisco_ios",
-    "host": "",
+    "host": "192.168.1.167",
     "username": username,
     "password": password,
 }
@@ -31,6 +31,7 @@ SWITCH = {
 #========================
 
 connection = None
+Read_Only = True
 notconnect_interfaces = []
 excluded_interfaces = []
 ports_to_disable = []
@@ -104,19 +105,18 @@ for interface in show_interfaces:
 
 if ports_to_disable == []:
     print("\nNo Interfaces to Disable")
-else:
+else: 
     print("\nList of Ports To Disable:")
-    for port in ports_to_disable:
-        print(port)
-
-
-
-
-
-
-
-
-
+    for interface in ports_to_disable:
+        print(interface)
+    if Read_Only == True:
+        print("\nRead Only Active, No Changes Will Be Made")
+        exit
+    else:
+        print("\nDisabling Ports:")
+        for interface in ports_to_disable:
+            print(f"Disabling {interface}")
+            connection.send_config_set([f"interface {interface}", "shutdown"])
 
 
 if connection:
