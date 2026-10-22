@@ -5,8 +5,8 @@ from netmiko import ConnectHandler
 # KEYRING SETTINGS
 #=========================
 
-service_name = "cisco_devices1"
-username = "Test"
+service_name = ""
+username = ""
 password = keyring.get_password(service_name, username)
 
 if not password:
@@ -21,7 +21,7 @@ if not password:
 
 SWITCH = {
     "device_type": "cisco_ios",
-    "host": "192.168.1.167",
+    "host": "",
     "username": username,
     "password": password,
 }
