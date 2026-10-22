@@ -15,9 +15,9 @@ if not password:
         f"under service name '{service_name}'"
     )
 
-# =========================
+#==========================
 # SWITCH SETTINGS
-# =========================
+#==========================
 
 SWITCH = {
     "device_type": "cisco_ios",
@@ -44,19 +44,20 @@ show_interfaces = connection.send_command("show interface", use_textfsm=True)
 
 #print(show_interfaces)
 
-#=============================================
-# Finding excluded ports by port description
-#=============================================
+#========================
+# Finding excluded ports
+#========================
 
-print("\nFinding Excluded Interfaces Based on Description")
+print("\nFinding Excluded Interfaces")
 for interface in show_interfaces:
     if interface['description'].startswith(ignore_prefixes):
+        excluded_interfaces.append(interface['interface'])
+    if "/1/" in interface['interface']:
         excluded_interfaces.append(interface['interface'])
 
 if excluded_interfaces == []:
     print("\nNo Interfaces Being Excluded Based on Description")
-else:
-    print(f"\nList of Excluded Interfaces: {excluded_interfaces}")
+    #print(f"\nList of Excluded Interfaces: {excluded_interfaces}")
 
 #==========================
 # Finding notconnect ports
@@ -73,8 +74,7 @@ for interface in show_interfaces:
 if notconnect_interfaces == []:
     print("\nNo Interfaces to Disable")
     exit
-else:
-    print(f"\nList of Notconnect Interfaces: {notconnect_interfaces}")
+    #print(f"\nList of Notconnect Interfaces: {notconnect_interfaces}")
 
 #===========================
 #Finding Last Time Port Used
@@ -105,7 +105,9 @@ for interface in show_interfaces:
 if ports_to_disable == []:
     print("\nNo Interfaces to Disable")
 else:
-    print(f"\nList of Ports To Disable: {ports_to_disable}")
+    print("\nList of Ports To Disable:")
+    for port in ports_to_disable:
+        print(port)
 
 
 
