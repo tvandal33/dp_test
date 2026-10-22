@@ -1,0 +1,124 @@
+import keyring
+from netmiko import ConnectHandler
+
+#=========================
+# KEYRING SETTINGS
+#=========================
+
+service_name = ""
+username = ""
+password = keyring.get_password(service_name, username)
+
+if not password:
+    raise ValueError(
+        f"Password for {username} not found in keyring "
+        f"under service name '{service_name}'"
+    )
+
+#==========================
+# SWITCH SETTINGS
+#==========================
+
+SWITCH = {
+    "device_type": "cisco_ios",
+    "host": "",
+    "username": username,
+    "password": password,
+}
+
+#========================
+# VARIABLES
+#========================
+
+connection = None
+Read_Only = True
+notconnect_interfaces = []
+excluded_interfaces = []
+ports_to_disable = []
+ignore_prefixes = ("OR-", "NS-", "PX-", "SL-", "PVM-", "LENEL")
+Week_Threshold = 26
+
+print("Connecting to Switch...")
+connection = ConnectHandler(**SWITCH)
+
+show_interfaces = connection.send_command("show interface", use_textfsm=True)
+
+#print(show_interfaces)
+
+#========================
+# Finding excluded ports
+#========================
+
+print("\nFinding Excluded Interfaces")
+for interface in show_interfaces:
+    if interface['description'].startswith(ignore_prefixes):
+        excluded_interfaces.append(interface['interface'])
+    if "/1/" in interface['interface']:
+        excluded_interfaces.append(interface['interface'])
+
+if excluded_interfaces == []:
+    print("\nNo Interfaces Being Excluded Based on Description")
+    #print(f"\nList of Excluded Interfaces: {excluded_interfaces}")
+
+#==========================
+# Finding notconnect ports
+#==========================
+
+print("\nFinding Notconnect Interfaces")
+for interface in show_interfaces:
+    if interface['interface'] in excluded_interfaces:
+        continue
+    else:
+        if interface['protocol_status'] == 'down (notconnect)':
+            notconnect_interfaces.append(interface['interface'])
+
+if notconnect_interfaces == []:
+    print("\nNo Interfaces to Disable")
+    exit
+    #print(f"\nList of Notconnect Interfaces: {notconnect_interfaces}")
+
+#===========================
+#Finding Last Time Port Used
+#===========================
+print("\nChecking Notconnect Interfaces Last Input and Output")
+for interface in show_interfaces:
+    if interface['interface'] not in notconnect_interfaces:
+        continue
+    else:
+        input_weeks = 0
+        output_weeks = 0
+
+        if "w" in interface['last_input']:
+            input_weeks = int(interface['last_input'].split('w')[0])
+
+        if "w" in interface['last_output']:
+            output_weeks = int(interface['last_output'].split('w')[0])
+
+        if (
+            (interface['last_input'] == "never" or input_weeks >= Week_Threshold)
+            and
+            (interface['last_output'] == "never" or output_weeks >= Week_Threshold)
+        ):
+            ports_to_disable.append(interface['interface'])
+        else:
+            continue
+
+if ports_to_disable == []:
+    print("\nNo Interfaces to Disable")
+else: 
+    print("\nList of Ports To Disable:")
+    for interface in ports_to_disable:
+        print(interface)
+    if Read_Only == True:
+        print("\nRead Only Active, No Changes Will Be Made")
+        exit
+    else:
+        print("\nDisabling Ports:")
+        for interface in ports_to_disable:
+            print(f"Disabling {interface}")
+            connection.send_config_set([f"interface {interface}", "shutdown"])
+
+
+if connection:
+        connection.disconnect()
+        print("\nDisconnected from switch.")
